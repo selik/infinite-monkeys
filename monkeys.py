@@ -1,99 +1,92 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 '''
-Collect the text of "Hamlet" from MIT's website.
-Parse dialogue from the HTML-formatted play.
+
 Train a Markov chain with a 2-word memory.
 Randomly generate a sentence.
 
     $ python monkeys.py
-    This spirit, dumb to us, will speak With most miraculous organ.
+    Might, by the image of my most painted word: O heavy burthen!
 
 '''
 
-# Comment-out any sections you don't wish to repeat if running this
-# script multiple times. It's impolite to frequently and repeatedly
-# download the same file from the MIT website.
-
-
-########################################################################
-### Collect: gather the data from original(ish) source
-
-from urllib.request import urlopen
-
-url = 'http://shakespeare.mit.edu/hamlet/full.html'
-
-with urlopen(url) as response:
-    data = response.read()
-
-html = data.decode('utf-8')
-
-with open('data/hamlet.html', 'w') as f:
-    f.write(html)
-
-
-########################################################################
-### Wrangle: transform, filter, combine, aggregate to a clean format
-
-import re
-
-pattern = r'<A NAME=(\d+)\.(\d+)\.(\d+)>(.*)</A><br>'
-
-dialogue = []
-with open('data/hamlet.html') as f:
-    for line in f:
-        mo = re.search(pattern, line)
-        if mo is not None:
-            act, scene, line, text = mo.groups()
-            dialogue.append(text)
-
-with open('data/dialogue.txt', 'w') as f:
-    f.write('\n'.join(dialogue))
-
-
-########################################################################
-### Analyze: make a useful generalization
-
 from collections import defaultdict
-import pickle
-
-chain = defaultdict(list)
-size = 2
-
-last = (None,) * size
-with open('data/dialogue.txt') as f:
-    for line in f:
-        for word in line.split():
-            chain[last].append(word)
-            last = last[1:] + (word,)
-
-# Discard any keys with a None
-chain = {k: v for k, v in chain.items() if None not in k}
-
-# Stash the trained Markov chain in a pickle file.
-with open('data/chain.pickle', 'wb') as f:
-    pickle.dump(chain, f)
+from itertools import islice
+from urllib.request import urlopen
+import random, re
 
 
-########################################################################
-### Report: an application, for varying definitions of the term
+def download(url='http://shakespeare.mit.edu/hamlet/full.html'):
+    '''
+    Download "Hamlet" in HTML-format from MIT's website.
+    '''
+    with urlopen(url) as response:
+        data = response.read()
+    return data.decode('utf-8')
 
-import pickle
-import random
 
-with open('data/chain.pickle', 'rb') as f:
-    chain = pickle.load(f)
+def parse_words(html, pattern=r'<A NAME=(\d+)\.(\d+)\.(\d+)>(.*)</A><br>'):
+    '''
+    Parse words of dialogue from an HTML-formatted play.
+    '''
+    with open('data/hamlet.html') as f:
+        for line in f:
+            mo = re.search(pattern, line)
+            if mo is not None:
+                speech = mo[4]
+                for word in speech.split():
+                    yield word
 
-sentence = []
 
-capitalized = [words for words in chain if words[0][0].isupper()]
-last = random.choice(capitalized)
-for word in last:
-    sentence.append(word)
+def build_chain(words, memory=1):
+    '''
+    Build a Markov chain from words.
+    By default, remember only 1 previous word.
+    '''
+    chain = defaultdict(list)
+    last = tuple(islice(words, memory))
+    for term in words:
+        chain[last].append(term)
+        last = last[1:] + (term,)
+    return chain
 
-while word[-1] not in '.?!':
-    word = random.choice(chain[last])
-    sentence.append(word)
-    last = last[1:] + (word,)
 
-print(' '.join(sentence))
+def sample_chain(chain, start=None):
+    '''
+    Walk randomly through the chain.
+    '''
+    if start is None:
+        last = random.choice(list(chain))
+    else:
+        last = start
+    while True:
+        term = random.choice(chain[last])
+        yield term
+        last = last[1:] + (term,)
+
+
+if __name__ == '__main__':
+    filename = 'data/hamlet.html'
+    try:
+        with open(filename) as f:
+            html = f.read()
+    except FileNotFoundError as e:
+        logging.error(f'Did not find "{filename}", downloading...')
+        logging.exception(e)
+        html = download()
+        with open(filename, 'w') as f:
+            f.write(html)
+        logging.error(f'... Saved HTML file as "{filename}."')
+
+    chain = build_chain(parse_words(html), memory=2)
+
+    capitalized = [words for words in chain if words[0][0].isupper()]
+    start = random.choice(capitalized)
+
+    for word in start:
+        print(word, end=' ')
+    for word in sample_chain(chain, start):
+        print(word, end=' ')
+        if word[-1] in '.?!':
+            print()
+            break
