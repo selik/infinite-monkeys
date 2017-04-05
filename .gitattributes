@@ -1,0 +1,2 @@
+# GitHub language detector should ignore the data folder
+data/* linguist-vendored
