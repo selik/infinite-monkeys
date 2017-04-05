@@ -43,30 +43,52 @@ class Chain(Mapping):
 
     def train(self, sequence):
         '''
-        Train on a sequence of events
+        Train on a sequence of events.
         '''
         it = iter(sequence)
-        history = tuple(itertools.islice(it, self.memory))
-        if len(history) < self.memory:
-            raise ValueError('Sequence must be longer than memory size')
-        for event in it:
-            self.chain[history].append(event)
-            history = history[1:] + (event,)
+        if self.memory == 1:
+            last = next(it)
+            for event in it:
+                self.chain[last].append(event)
+                last = event
+        else: # memory > 1
+            history = tuple(itertools.islice(it, self.memory))
+            if len(history) < self.memory:
+                raise ValueError('Sequence must be longer than memory size')
+            for event in it:
+                self.chain[history].append(event)
+                history = history[1:] + (event,)
 
     def walk(self, start=None):
         '''
         Walk randomly through the chain.
         '''
-        if start is None:
-            history = random.choice(list(self.chain))
-            for event in history:
+        if self.memory == 1:
+            if start is None:
+                event = random.choice(list(self.chain))
                 yield event
-        else:
-            history = start
-        while True:
-            event = random.choice(self.chain[history])
-            yield event
-            history = history[1:] + (event,)
+            else:
+                event = start
+            while True:
+                try:
+                    event = random.choice(self.chain[event])
+                except IndexError:
+                    break
+                yield event
+        else: # memory > 1
+            if start is None:
+                history = random.choice(list(self.chain))
+                for event in history:
+                    yield event
+            else:
+                history = start
+            while True:
+                try:
+                    event = random.choice(self.chain[history])
+                except IndexError:
+                    break
+                yield event
+                history = history[1:] + (event,)
 
     def __len__(self):
         '''
