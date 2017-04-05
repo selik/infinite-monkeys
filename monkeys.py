@@ -41,6 +41,9 @@ class Chain(Mapping):
         if sequence is not None:
             self.train(sequence)
 
+    def __repr__(self):
+        return f'<{self.__class__.__name__} {dict(self.chain)}>'
+
     def train(self, sequence):
         '''
         Train on a sequence of events.
