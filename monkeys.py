@@ -166,10 +166,14 @@ class WordChain(Chain):
         '''
         sentence = []
         start = random.choice(self.capitalized)
-        for word in itertools.chain(start, self.walk(start)):
+        for word in self.walk(start):
             sentence.append(word)
             if word[-1] in '.?!':
-                return ' '.join(sentence)
+                break
+        if self.memory == 1:
+            sentence.insert(0, start)
+            return ' '.join(sentence)
+        return ' '.join(itertools.chain(start, sentence))
 
     @staticmethod
     def words_from_text(lines):
