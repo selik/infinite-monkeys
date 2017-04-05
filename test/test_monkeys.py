@@ -42,6 +42,41 @@ But let that go.
 
 class Numbers_1121_Memory1_TestCase(unittest.TestCase):
     '''
+    1: 50% -> 1
+       50% -> 2
+    2: no transitions
+    '''
+
+    seq = [1, 1, 2]
+
+    def setUp(self):
+        random.seed(42)
+
+    def test_dict(self):
+        chain = Chain(self.seq)
+        self.assertEqual(chain, {1: [1, 2]})
+
+    def test_walk_no_start(self):
+        chain = Chain(self.seq)
+        self.assertEqual(list(islice(chain.walk(), 10)),
+                         [1, 1, 2])
+
+    def test_walk_start_1(self):
+        chain = Chain(self.seq)
+        self.assertEqual(list(islice(chain.walk(start=1), 10)),
+                         [1, 1, 2])
+
+    def test_walk_start_2(self):
+        chain = Chain(self.seq)
+        self.assertEqual(list(islice(chain.walk(start=2), 10)),
+                         [])
+
+
+class Numbers_1121_Memory2_TestCase(unittest.TestCase):
+    '''
+    1: 50% -> 1
+       50% -> 2
+    2: 100% -> 1
     '''
 
     seq = [1, 1, 2, 1]

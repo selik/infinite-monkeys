@@ -59,9 +59,21 @@ class Chain(Mapping):
                 self.chain[history].append(event)
                 history = history[1:] + (event,)
 
+    def choice(self, state):
+        '''
+        Randomly select a transition from a state.
+        '''
+        if state not in self.chain:
+            raise KeyError(state)
+        return random.choice(self.chain[state])
+
+    __choice = choice
+
     def walk(self, start=None):
         '''
-        Walk randomly through the chain.
+        Walk randomly through the chain. This may be infinite if all
+        states in the chain have transitions, even if those transitions
+        are simply a cycle back to themselves.
         '''
         if self.memory == 1:
             if start is None:
@@ -71,8 +83,8 @@ class Chain(Mapping):
                 event = start
             while True:
                 try:
-                    event = random.choice(self.chain[event])
-                except IndexError:
+                    event = self.__choice(event)
+                except KeyError:
                     break
                 yield event
         else: # memory > 1
@@ -84,8 +96,8 @@ class Chain(Mapping):
                 history = start
             while True:
                 try:
-                    event = random.choice(self.chain[history])
-                except IndexError:
+                    event = self.__choice(history)
+                except KeyError:
                     break
                 yield event
                 history = history[1:] + (event,)
